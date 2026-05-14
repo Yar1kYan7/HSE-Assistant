@@ -2,12 +2,19 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
+import os
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env
+load_dotenv()
+
+# Берём токен из окружения
+TOKEN = os.getenv("BOT_TOKEN")
+
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-
-TOKEN = ""
 
 # Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
