@@ -1,14 +1,14 @@
+import os
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-import os
 from dotenv import load_dotenv
 
 # Загружаем переменные из .env
 load_dotenv()
 
-# Берём токен из окружения
+# Берём токен из переменной окружения BOT_TOKEN
 TOKEN = os.getenv("BOT_TOKEN")
 
 
