@@ -7,7 +7,7 @@ from aiogram.filters import Command
 logging.basicConfig(level=logging.INFO)
 
 
-TOKEN = "8715889472:AAFv0zitEfqJ75JwA7Ycci7IXQrgxyvsGEk"
+TOKEN = ""
 
 # Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
