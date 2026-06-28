@@ -136,16 +136,3 @@ async def get_all_user_ids() -> list[int]:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
 
-
-async def get_all_subscriptions() -> list[tuple[int, str | None]]:
-    """Возвращает список всех подписчиков с их подгруппами."""
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT s.user_id, u.subgroup
-            FROM subscriptions s
-            LEFT JOIN users u ON s.user_id = u.user_id
-            """
-        )
-        return [(row["user_id"], row["subgroup"]) for row in rows]

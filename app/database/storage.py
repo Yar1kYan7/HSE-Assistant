@@ -1,7 +1,7 @@
+from typing import List
 import json
 from datetime import date
 from pathlib import Path
-from typing import List
 from app.parser.models import Homework
 
 
@@ -54,8 +54,6 @@ def save_homeworks(homeworks: List[Homework]):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-from pathlib import Path
-
 FAQ_FILE = Path("data/faq.json")
 
 def load_faq() -> List[dict]:
@@ -75,37 +73,3 @@ def save_faq(faq_list: List[dict]):
     with open(FAQ_FILE, "w", encoding="utf-8") as f:
         json.dump({"faq": faq_list}, f, ensure_ascii=False, indent=2)
 
-
-@router.message(Command("faq"))
-async def cmd_faq(message: Message):
-    """Поиск по базе знаний (FAQ)."""
-    args = message.text.split(maxsplit=1)
-    if len(args) < 2:
-        await message.answer(
-            "❓ Напишите вопрос после команды, например:\n"
-            "/faq что делать если заболел"
-        )
-        return
-
-    query = args[1].lower()
-    faq_list = load_faq()
-
-    # Простой поиск по ключевым словам
-    results = []
-    for entry in faq_list:
-        if query in entry.get("keywords", "").lower() or query in entry.get("question", "").lower():
-            results.append(entry)
-
-    if not results:
-        await message.answer(
-            "🤔 Я не нашёл ответа на твой вопрос.\n\n"
-            "Попробуй переформулировать или обратись в учебный офис."
-        )
-        return
-
-    # Показываем первый результат
-    entry = results[0]
-    await message.answer(
-        f"❓ *{entry['question']}*\n\n{entry['answer']}",
-        parse_mode="Markdown"
-    )
