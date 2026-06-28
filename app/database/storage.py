@@ -3,7 +3,6 @@ from datetime import date
 from pathlib import Path
 from typing import List
 from app.parser.models import Homework
-from .storage import load_faq, save_faq
 
 
 STORAGE_FILE = Path("data/storage.json")
