@@ -136,3 +136,50 @@ async def get_all_user_ids() -> list[int]:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
 
+
+
+# ========== ФУНКЦИИ ДЛЯ РАБОТЫ С FAQ ==========
+
+async def search_faq(query: str) -> list[dict]:
+    """
+    Поиск по FAQ по ключевым словам.
+    Возвращает список записей, где query встречается в question или keywords.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, question, answer, keywords
+            FROM faq_entries
+            WHERE question ILIKE $1 OR keywords ILIKE $1
+            ORDER BY id
+            LIMIT 5
+            """,
+            f"%{query}%"
+        )
+        return [dict(row) for row in rows]
+
+
+async def add_faq_entry(question: str, answer: str, keywords: str) -> bool:
+    """Добавляет новую запись в FAQ."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO faq_entries (question, answer, keywords)
+            VALUES ($1, $2, $3)
+            """,
+            question, answer, keywords
+        )
+        return True
+
+
+async def delete_faq_entry(entry_id: int) -> bool:
+    """Удаляет запись из FAQ по ID."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM faq_entries WHERE id = $1",
+            entry_id
+        )
+        return result != "DELETE 0"
