@@ -269,11 +269,17 @@ async def cmd_info_from_user(message: Message, user_id: int):
 
 @router.message(Command("notification"))
 async def cmd_notification(message: Message):
-    subgroup = await get_user_subgroup(message.from_user.id)
+    user_id = message.from_user.id
+    subgroup = await get_user_subgroup(user_id)
+
     if not subgroup:
-        await message.answer("⚠️ Сначала выберите подгруппу командой /start", reply_markup=get_subgroup_keyboard())
+        await message.answer(
+            "⚠️ Сначала выберите подгруппу командой /start",
+            reply_markup=get_subgroup_keyboard()
+        )
         return
-    subscribed = await is_subscribed(message.from_user.id)
+
+    subscribed = await is_subscribed(user_id)
     text = "🔔 Вы подписаны на уведомления." if subscribed else "🔕 Вы не подписаны."
     keyboard = get_notification_keyboard(subscribed)
     await message.answer(text, reply_markup=keyboard)
@@ -341,7 +347,8 @@ async def handle_subscription(callback: CallbackQuery):
 @router.callback_query(lambda c: c.data and c.data.startswith("subgroup:"))
 async def handle_subgroup(callback: CallbackQuery):
     subgroup = callback.data.split(":", 1)[1]
-    await set_user_subgroup(callback.from_user.id, subgroup)
+    await set_user_subgroup(callback.from_user.id, subgroup)  # ← это должно быть
+
     text = (
         f"✅ Подгруппа <b>{subgroup}</b> сохранена!\n\n"
         "📋 Доступные команды:\n"

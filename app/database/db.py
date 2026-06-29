@@ -96,16 +96,6 @@ async def remove_subscription(user_id: int):
             user_id
         )
 
-async def get_user_subgroup(user_id: int) -> str | None:
-    """Возвращает подгруппу пользователя."""
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT subgroup FROM users WHERE user_id = $1",
-            user_id
-        )
-        return row["subgroup"] if row else None
-
 async def set_user_subgroup(user_id: int, subgroup: str):
     """Устанавливает подгруппу пользователя."""
     pool = await get_pool()
@@ -115,6 +105,22 @@ async def set_user_subgroup(user_id: int, subgroup: str):
             "ON CONFLICT (user_id) DO UPDATE SET subgroup = $2",
             user_id, subgroup
         )
+        logger.info(f"✅ Подгруппа для пользователя {user_id} установлена: {subgroup}")
+
+async def get_user_subgroup(user_id: int) -> str | None:
+    """Возвращает подгруппу пользователя."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT subgroup FROM users WHERE user_id = $1",
+            user_id
+        )
+        if row:
+            logger.info(f"✅ Найдена подгруппа для {user_id}: {row['subgroup']}")
+            return row["subgroup"]
+        else:
+            logger.warning(f"⚠️ Подгруппа для {user_id} не найдена")
+            return None
 
 async def get_all_subscriptions() -> list[tuple[int, str | None]]:
     """Возвращает список всех подписчиков с их подгруппами."""
