@@ -204,6 +204,66 @@ async def cmd_schedule(message: Message):
         await message.answer("❌ Не удалось загрузить расписание. Попробуйте позже.")
 
 
+# ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ КНОПОК МЕНЮ ==========
+
+async def cmd_schedule_from_user(message: Message, user_id: int):
+    """Отдельная функция для расписания, принимающая user_id."""
+    subgroup = await get_user_subgroup(user_id)
+    if not subgroup:
+        await message.answer(
+            "⚠️ Сначала выберите подгруппу командой /start",
+            reply_markup=get_subgroup_keyboard()
+        )
+        return
+
+    await message.answer("⏳ Загружаю расписание на сегодня...")
+    try:
+        text = await get_today_schedule_message(subgroup=subgroup)
+        await message.answer(
+            text,
+            disable_web_page_preview=True,
+            reply_markup=get_schedule_link_keyboard()
+        )
+    except Exception as e:
+        # Добавим лог для диагностики
+        print(f"Ошибка расписания: {e}")
+        await message.answer("❌ Не удалось загрузить расписание. Попробуйте позже.")
+
+
+async def cmd_info_from_user(message: Message, user_id: int):
+    """Отдельная функция для ДЗ, принимающая user_id."""
+    subgroup = await get_user_subgroup(user_id)
+    if not subgroup:
+        await message.answer(
+            "⚠️ Сначала выберите подгруппу командой /start",
+            reply_markup=get_subgroup_keyboard()
+        )
+        return
+
+    homeworks = load_homeworks()
+    if not homeworks:
+        await message.answer("⏳ Загружаю данные из таблицы...")
+        try:
+            homeworks = await parse_homework()
+            if homeworks:
+                save_homeworks(homeworks)
+        except Exception:
+            await message.answer("❌ Не удалось загрузить данные. Попробуйте позже.")
+            return
+
+    filtered = [h for h in homeworks if h.subgroup == subgroup or h.subgroup == "Все"]
+    if not filtered:
+        await message.answer(f"📭 ДЗ для <b>{subgroup}</b> на ближайшие 2 недели не найдено.")
+        return
+
+    messages = format_homeworks(filtered, subgroup=subgroup)
+    keyboard = get_sheet_link_keyboard()
+    for i, msg in enumerate(messages):
+        if i == len(messages) - 1:
+            await message.answer(msg, reply_markup=keyboard)
+        else:
+            await message.answer(msg)
+
 @router.message(Command("notification"))
 async def cmd_notification(message: Message):
     subgroup = await get_user_subgroup(message.from_user.id)
@@ -232,19 +292,29 @@ async def cmd_help(message: Message):
     await message.answer(text, parse_mode="Markdown")
 
 
-
 @router.callback_query(lambda c: c.data.startswith("menu_"))
 async def menu_callback(callback: CallbackQuery):
+    user_id = callback.from_user.id  # Берём ID пользователя из callback
+
     if callback.data == "menu_schedule":
-        await cmd_schedule(callback.message)
+        # Передаём user_id в новую функцию
+        await cmd_schedule_from_user(callback.message, user_id)
+
     elif callback.data == "menu_homework":
-        await cmd_info(callback.message)
+        await cmd_info_from_user(callback.message, user_id)
+
     elif callback.data == "menu_faq":
-        await callback.message.answer("❓ Напишите /faq и ваш вопрос, например:\n/faq что делать если заболел")
+        await callback.message.answer(
+            "❓ Напишите /faq и ваш вопрос, например:\n"
+            "/faq что делать если заболел"
+        )
+
     elif callback.data == "menu_notification":
         await cmd_notification(callback.message)
+
     elif callback.data == "menu_help":
         await cmd_help(callback.message)
+
     await callback.answer()
 
 
@@ -347,3 +417,38 @@ async def report_confirm(callback: CallbackQuery, state: FSMContext):
     except Exception:
         pass
     await callback.answer("Готово")
+
+    # ========== ОБРАБОТЧИК ЛЮБЫХ ТЕКСТОВЫХ СООБЩЕНИЙ (ПОИСК ПО FAQ) ==========
+
+    @router.message()
+    async def handle_any_text(message: Message):
+        """
+        Этот обработчик срабатывает на ЛЮБОЕ текстовое сообщение,
+        которое не является командой (не начинается с /).
+        """
+        # Пропускаем команды
+        if message.text.startswith('/'):
+            return
+
+        query = message.text.lower()
+        faq_list = load_faq()
+
+        # Ищем совпадения в вопросах и ключевых словах
+        results = []
+        for entry in faq_list:
+            if query in entry.get("keywords", "").lower() or query in entry.get("question", "").lower():
+                results.append(entry)
+
+        if not results:
+            await message.answer(
+                "🤔 Я не нашёл ответа на твой вопрос.\n\n"
+                "Попробуй переформулировать или обратись в учебный офис."
+            )
+            return
+
+        # Показываем первый найденный ответ
+        entry = results[0]
+        await message.answer(
+            f"❓ *{entry['question']}*\n\n{entry['answer']}",
+            parse_mode="Markdown"
+        )
